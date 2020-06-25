@@ -1,11 +1,9 @@
 package com.javatechie.spring.drools.api;
 
+import com.javatechie.spring.drools.api.model.FactsDTO;
 import com.javatechie.spring.drools.api.model.Order;
 import org.kie.api.runtime.KieSession;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
@@ -19,16 +17,10 @@ public class RuleController {
 	}
 
 
-	@GetMapping("/rule")
-	public void fireRules() {
-		KieSession kieSession = sessions.get("dealerCode");
-		Order order = new Order();
-		order.setCardType("ICICI");
-		order.setPrice(15001);
-		order.setName("test");
-		order.setDiscount(1);
-		kieSession.insert( order );
-
+	@GetMapping("/rule/{dealerCode}")
+	public void fireRules(@PathVariable String dealerCode, FactsDTO facts) {
+		KieSession kieSession = sessions.get(dealerCode);
+		kieSession.insert( facts );
 		kieSession.fireAllRules();
 	}
 
