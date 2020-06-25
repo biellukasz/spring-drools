@@ -12,17 +12,23 @@ import java.util.Map;
 public class DataService {
 
 
-    public List<byte[]> getRulesFromDB() {
+    public List<String> getRulesFromDB() {
         SingleConnectionDataSource dataSource = new SingleConnectionDataSource();
-        List<byte[]> rulesList = new ArrayList<>();
+        List<String> rulesList = new ArrayList<>();
         dataSource.setDriverClassName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
         dataSource.setUrl("jdbc:sqlserver://127.0.0.1:1433;DatabaseName=MP2_GMG_MNU");
         dataSource.setUsername("sa");
         dataSource.setPassword("Lukas!98765");
         JdbcTemplate template = new JdbcTemplate(dataSource);
         try{
-            List<Map<String, Object>> rules = template.queryForList("SELECT droolsBinaryExecution FROM  MenuRule");
-            rules.forEach(map -> rulesList.add((byte[]) map.get("droolsBinaryExecution")));
+            List<Map<String, Object>> rules = template.queryForList("SELECT ruleDescription FROM  MenuRule");
+            rules.stream()
+                    .map(map ->  (String) map.get("ruleDescription"))
+                    .filter(ruleDescription -> !"".equals(ruleDescription) && ruleDescription != null && ruleDescription.contains("package"))
+                    .map(rule -> rule.replace("import com.cliffordthames.evolution.menumgmt.facts.*;","import com.javatechie.spring.drools.api.model.facts.*"))
+                    .filter(rule -> !rule.contains("rule \"SML_dealerrecservice_manufactor\""))
+                    .filter(rule -> !rule.contains("rule \"SML_dealerrecservice_custom\""))
+                    .forEach(rulesList::add);
             return rulesList;
         }finally {
             dataSource.destroy();

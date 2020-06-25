@@ -7,26 +7,29 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Map;
+
 @RestController
 public class RuleController {
 
-	private KieSession session;
+	private Map<String,KieSession> sessions;
 
-	public RuleController(KieSession session) {
-		this.session = session;
+	public RuleController(Map<String,KieSession> sessions) {
+		this.sessions = sessions;
 	}
 
 
 	@GetMapping("/rule")
 	public void fireRules() {
+		KieSession kieSession = sessions.get("dealerCode");
 		Order order = new Order();
 		order.setCardType("ICICI");
 		order.setPrice(15001);
 		order.setName("test");
 		order.setDiscount(1);
-		session.insert( order );
+		kieSession.insert( order );
 
-		session.fireAllRules();
+		kieSession.fireAllRules();
 	}
 
 }
