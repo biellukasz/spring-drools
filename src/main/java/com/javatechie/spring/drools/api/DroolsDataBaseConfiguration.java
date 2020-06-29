@@ -8,13 +8,10 @@ import org.drools.compiler.lang.descr.PackageDescr;
 import org.drools.core.impl.InternalKnowledgeBase;
 import org.drools.core.impl.KnowledgeBaseFactory;
 import org.drools.core.util.DroolsStreamUtils;
-import org.kie.api.KieBase;
 import org.kie.api.KieServices;
-import org.kie.api.builder.*;
-import org.kie.api.io.Resource;
-import org.kie.api.runtime.KieContainer;
+import org.kie.api.marshalling.Marshaller;
 import org.kie.api.runtime.KieSession;
-import org.kie.internal.io.ResourceFactory;
+import org.kie.internal.marshalling.MarshallerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -25,6 +22,7 @@ import java.util.*;
 public class DroolsDataBaseConfiguration {
 
     private final DataService dataService;
+
 
     String localDsl= "[condition][]the rule is valid regarding \"{validFromInMillis}\" to \"{validToInMillis}\" = theDateFact : DateFact(); eval( theDateFact.validateRuleFromTo( ({validFromInMillis}L), ({validToInMillis}L) ) )\n" +
             "[condition][]the rule is applicable accoring to job last modified for \"{ruleCreationDateInMillis}\" inCombinationWith \"{ruleIgnoreAffectedMenusChanged}\" = theJobFactForEval: JobFact(); eval( theJobFactForEval.validateJobLastModified({ruleIgnoreAffectedMenusChanged}, ({ruleCreationDateInMillis}L) ) )\n" +
@@ -122,58 +120,24 @@ public class DroolsDataBaseConfiguration {
             "[consequence][]add hidden labour cost excl tax \"{hiddenCargeAsString}\" = theClonedJobFact.addHiddenLabourCostExclTax( \"{hiddenCargeAsString}\" );\n" +
             "\n" +
             "[consequence][]add additional labour time for \"{labourCode}\" by time \"{newTime}\"  = theClonedJobFact.addAdditionalLabourTime( \"{newTime}\", \"{labourCode}\" );\n";
-
+        private final String rule = "package KieTest;\n" +
+                "import com.javatechie.spring.drools.api.model.Order;\n" +
+                "\n" +
+                "rule \"HDFC\"\n" +
+                "\n" +
+                "when\n" +
+                "orderObject : Order(cardType==\"HDFC\" && price>10000);\n" +
+                "then\n" +
+                "System.out.println(orderObject.getPrice());\n" +
+                "end;";
     public DroolsDataBaseConfiguration(DataService dataService) {
         this.dataService = dataService;
     }
 
 
-//    public KieFileSystem getKieFileSystem() throws IOException, ClassNotFoundException {
-//        KieFileSystem kieFileSystem = getKieServices().newKieFileSystem();
-//        for (Resource resource : getRulesFromDB()) {
-//            kieFileSystem.write(resource);
-//        }
-//        kieFileSystem.write(ResourceFactory.newClassPathResource("rule.drl"));
-//        return kieFileSystem;
-//    }
-
-    private List<String> getRulesFromDB() throws IOException, ClassNotFoundException {
+    private List<String> getRulesFromDB() {
         return dataService.getRulesFromDB();
     }
-
-//    @Bean
-//    public KieContainer getKieContainer() throws IOException, ClassNotFoundException, DroolsParserException {
-//        final KieRepository kieRepository = getKieServices().getRepository();
-//
-//        kieRepository.addKieModule(new KieModule() {
-//            public ReleaseId getReleaseId() {
-//                return kieRepository.getDefaultReleaseId();
-//            }
-//        });
-//
-//        KieBuilder kieBuilder = getKieServices().newKieBuilder(getKieFileSystem());
-//        kieBuilder.buildAll();
-//        //
-//
-//
-//
-//        if (kieBuilder.getResults().hasMessages(Message.Level.ERROR)) {
-//            for (Message result : kieBuilder.getResults().getMessages()) {
-//                System.out.println("Error: " + result.getText());
-//            }
-//            throw new RuntimeException("Unable to create KJar for requested conditions resources");
-//        }
-//        return getKieServices().newKieContainer(kieRepository.getDefaultReleaseId());
-//    }
-
-    private KieServices getKieServices() {
-        return KieServices.Factory.get();
-    }
-
-//    @Bean
-//    public KieBase kieBase() throws IOException, ClassNotFoundException, DroolsParserException {
-//        return getKieContainer().getKieBase();
-//    }
 
     @Bean
     public Map<String,KieSession> kieSession() throws IOException, ClassNotFoundException, DroolsParserException {
@@ -182,19 +146,21 @@ public class DroolsDataBaseConfiguration {
         // Parsing with dsl file
         KnowledgeBuilderImpl knowledgeBuilder = new KnowledgeBuilderImpl();
         Map<String,KieSession> kieSessionMap = new HashMap<>();
-        for(String rule : getRulesFromDB()){
-            DrlParser drlParser = new DrlParser();
-            // Building package
-            PackageDescr parse = drlParser.parse(rule,new StringReader(localDsl));
+        DrlParser drlParser = new DrlParser();
+//        for(String rule : getRulesFromDB()){
+//            // Building package
+//            PackageDescr parse = drlParser.parse(rule,new StringReader(localDsl));
+//            knowledgeBuilder.addPackage(parse);
+//        }
+        PackageDescr parse = drlParser.parse(false,rule);
 
-            knowledgeBuilder.addPackage(parse);
-
-
-        }
+        knowledgeBuilder.addPackage(parse);
 
         final InternalKnowledgeBase kBase = KnowledgeBaseFactory.newKnowledgeBase();
         kBase.addPackages( Arrays.asList(knowledgeBuilder.getPackages()) );
         KieSession kieSession = kBase.newKieSession();
+        byte[] bytes = DroolsStreamUtils.streamOut(kieSession);
+        KieSession kieSessionFromBytes = (KieSession) DroolsStreamUtils.streamIn(bytes);
         kieSessionMap.put("dealerCode",kieSession);
 
 
