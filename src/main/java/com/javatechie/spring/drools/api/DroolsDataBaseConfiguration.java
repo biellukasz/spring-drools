@@ -8,10 +8,7 @@ import org.drools.compiler.lang.descr.PackageDescr;
 import org.drools.core.impl.InternalKnowledgeBase;
 import org.drools.core.impl.KnowledgeBaseFactory;
 import org.drools.core.util.DroolsStreamUtils;
-import org.kie.api.KieServices;
-import org.kie.api.marshalling.Marshaller;
 import org.kie.api.runtime.KieSession;
-import org.kie.internal.marshalling.MarshallerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -126,7 +123,7 @@ public class DroolsDataBaseConfiguration {
                 "rule \"HDFC\"\n" +
                 "\n" +
                 "when\n" +
-                "orderObject : Order(cardType==\"HDFC\" && price>10000);\n" +
+                "orderObject : Order(cardType==\"HDFC\" && price>10000)\n" +
                 "then\n" +
                 "System.out.println(orderObject.getPrice());\n" +
                 "end;";
@@ -147,32 +144,26 @@ public class DroolsDataBaseConfiguration {
         KnowledgeBuilderImpl knowledgeBuilder = new KnowledgeBuilderImpl();
         Map<String,KieSession> kieSessionMap = new HashMap<>();
         DrlParser drlParser = new DrlParser();
-//        for(String rule : getRulesFromDB()){
-//            // Building package
-//            PackageDescr parse = drlParser.parse(rule,new StringReader(localDsl));
-//            knowledgeBuilder.addPackage(parse);
-//        }
-        PackageDescr parse = drlParser.parse(false,rule);
+        for(int i = 0; i < 1000; i++){
+            System.out.println(i);
+            for(String rule : getRulesFromDB()){
+                // Building package
+                PackageDescr parse = drlParser.parse(rule,new StringReader(localDsl));
+                knowledgeBuilder.addPackage(parse);
+            }
+        }
 
-        knowledgeBuilder.addPackage(parse);
+//        knowledgeBuilder.addPackage(parse);
 
         final InternalKnowledgeBase kBase = KnowledgeBaseFactory.newKnowledgeBase();
         kBase.addPackages( Arrays.asList(knowledgeBuilder.getPackages()) );
         KieSession kieSession = kBase.newKieSession();
         byte[] bytes = DroolsStreamUtils.streamOut(kieSession);
         KieSession kieSessionFromBytes = (KieSession) DroolsStreamUtils.streamIn(bytes);
+
+        // storing in cache
         kieSessionMap.put("dealerCode",kieSession);
 
-
-//         PackageDescr parse = drlParser.parse(rule,new StringReader(localDsl));
-        // Saving byte array to DB
-//        byte[] streamOut = DroolsStreamUtils.streamOut( parse );
-
-
-        // Kie server side
-        // Fetching rules for each dealer and creating kie session
-//        ByteArrayInputStream ruleBinaryStream = new ByteArrayInputStream( streamOut );
-//        PackageDescr pck = (PackageDescr) DroolsStreamUtils.streamIn(ruleBinaryStream);
 
 
         // Creating map with kiesessions
